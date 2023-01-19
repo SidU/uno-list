@@ -56,7 +56,10 @@ function App() {
       setIsThinking(false);
       return;
     }
-    
+  }
+
+  const handleDeleteClick = (itemToDelete) => {
+    setItems(items.filter(i => i !== itemToDelete));
   }
 
   return (
@@ -68,7 +71,7 @@ function App() {
         <h4>{listTitle}</h4>
         <ListGroup>
           {items.map((item) => (
-            <ListGroup.Item key={item}>{item}</ListGroup.Item>
+            <ListGroup.Item key={item}>{item} <Button variant='outline-danger' onClick={() => {handleDeleteClick(item)}}>Delete</Button></ListGroup.Item>
           ))}
           <ListGroup.Item>
             <Form onSubmit={handleSubmit}>
