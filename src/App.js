@@ -113,7 +113,7 @@ function App() {
         <h4>Configure</h4>
         <Form>
           <Form.Group className="mb-3" controlId="formItemText">
-            <Form.Control type="text" value={key} onChange={handleKeyChange} placeholder="Key" />
+            <Form.Control type="password" value={key} onChange={handleKeyChange} placeholder="Key" />
             <a href='https://beta.openai.com/account/api-keys'>Get</a>
           </Form.Group>
         </Form>
