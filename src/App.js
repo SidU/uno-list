@@ -9,25 +9,53 @@ import getActions from './Skills/GetActions';
 function App() {
 
   const [userInput, setUserInput] = useState('');
-  const [items, setItems] = useState([]);
+  const [lists, setLists] = useState(new Map([['Default List', []]]));
   const [suggestedItems, setSuggestedItems] = useState(['Add some items and then tap Think']);
   const [actions, setActions] = useState(['Add some items and then tap Think']);
   const [key, setKey] = useState('');
-  const [listTitle, setListTitle] = useState('Add some items here');
+  const [listTitle, setListTitle] = useState('Default List');
   const [isThinking, setIsThinking] = useState(false);
 
   const handleItemChange = (e) => {
     setUserInput(e.currentTarget.value)
   }
 
-  const handleAdd = () => {
-    setItems([...items, userInput]);
+  const handleItemAdd = () => {
+    addItemToList(listTitle, userInput);
+
     setUserInput("");
+  }
+
+  const handleItemDelete = (itemToDelete) => {
+    deleteItemFromList(listTitle, itemToDelete);
   }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    handleAdd();
+    handleItemAdd();
+  }
+
+  const addItemToList = (listName, item) => {
+    const newList = new Map(lists);
+    newList.set(listName, [...newList.get(listName), item]);
+    setLists(newList);
+  }
+
+  const deleteItemFromList = (listName, item) => {
+    const newList = new Map(lists);
+    newList.set(listName, newList.get(listName).filter(i => i !== item));
+    setLists(newList);
+  }
+
+  const getListItems = (listName) => {
+    return lists.get(listName);
+  }
+
+  const renameList = (oldName, newName) => {
+    const newList = new Map(lists);
+    newList.set(newName, newList.get(oldName));
+    newList.delete(oldName);
+    setLists(newList);
   }
 
   const handleKeyChange = (e) => {
@@ -43,23 +71,38 @@ function App() {
         throw new Error('Please enter a key');
       }
 
-      setListTitle(await getListTitle(items, key));
+      let items = getListItems(listTitle);
 
+      // Give the current list a name. Move the items in the existing list to new list.
+      let prevListTitle = listTitle;
+      let newListTitle = await getListTitle(items, key);
+      renameList(prevListTitle, newListTitle);
+      setListTitle(newListTitle);
+
+      // Use AI to determine suggested items.
       setSuggestedItems(await getSuggestedItems(items, listTitle, 5, key));
 
+      // Use AI to determine actions.
       setActions(await getActions(items, listTitle, 5, key));
 
       setIsThinking(false);
     }
     catch (e) {
-      alert(e.message);
+      if (e?.response.status === 401) {
+        alert('Invalid key');
+      }
+      else {     
+        alert(e.message);
+      }
+
       setIsThinking(false);
       return;
     }
   }
 
-  const handleDeleteClick = (itemToDelete) => {
-    setItems(items.filter(i => i !== itemToDelete));
+  const handleSuggestionAccept = (suggestion) => {
+    addItemToList(listTitle, suggestion);
+    setSuggestedItems(suggestedItems.filter(i => i !== suggestion));
   }
 
   return (
@@ -70,8 +113,8 @@ function App() {
         <div className='App-container'>
         <h4>{listTitle}</h4>
         <ListGroup>
-          {items.map((item) => (
-            <ListGroup.Item key={item}>{item} <Button variant='outline-danger' onClick={() => {handleDeleteClick(item)}}>Delete</Button></ListGroup.Item>
+          {getListItems(listTitle)?.map((item) => (
+            <ListGroup.Item key={item}>{item} <Button variant='outline-danger' onClick={() => {handleItemDelete(item)}}>Delete</Button></ListGroup.Item>
           ))}
           <ListGroup.Item>
             <Form onSubmit={handleSubmit}>
@@ -101,7 +144,7 @@ function App() {
         <h4>Suggested items</h4>
         <ListGroup>
           {suggestedItems.map((item) => (
-            <ListGroup.Item key={item}>{item}</ListGroup.Item>
+            <ListGroup.Item key={item}>{item} <Button variant='outline-success' onClick={() => {handleSuggestionAccept(item)}}>Accept</Button></ListGroup.Item>
           ))}
         </ListGroup>
         <h4>Actions you can take</h4>
