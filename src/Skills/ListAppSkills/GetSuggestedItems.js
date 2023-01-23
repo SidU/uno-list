@@ -1,4 +1,4 @@
-import promptGpt from '../Skills/GPT.js';
+import promptGpt from '../../Skills/GPT.js';
 
 export default async function getSuggestedItems(items, listTitle, count, key) {
     

@@ -27,7 +27,7 @@ export default async function promptGpt (prompt, key) {
     }
     catch(e) {
       console.log(e);
-      return [];
+      throw e;
     }
     
   }

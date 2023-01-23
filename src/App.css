@@ -44,3 +44,19 @@
 .App-container h4 {
   margin-top: 1.25em;
 }
+
+.App-container .App-actions {
+  margin-top: 1.25em;
+}
+
+.App-globalActions {
+  margin-left: 20%;
+  margin-right: 20%;
+  margin-top: 1.25em;
+}
+
+.App-config {
+  margin-left: 20%;
+  margin-right: 20%;
+  margin-top: 1.25em;
+}
