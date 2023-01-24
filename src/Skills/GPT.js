@@ -1,13 +1,15 @@
 import axios from 'axios';
 
-export default async function promptGpt (prompt, key) {
+export default async function promptGpt (prompt, key, config) {
+
+  console.log(prompt);
 
     try {
       const response = await axios(
         {
             method: 'post',
             url: 'https://api.openai.com/v1/completions',
-            data: {
+            data: config ?? {
                 "model": "text-davinci-003",
                 "prompt": prompt,
                 "temperature": 0.3,

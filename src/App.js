@@ -1,17 +1,24 @@
 import './App.css';
-import ListApp from './ListApp';
-import { Form, Button, ButtonGroup, Spinner } from 'react-bootstrap';
+import ListApp from './miniApps/ListApp';
+import FoodAndDrinkApp from './miniApps/FoodAndDrinkApp';
+import { Form, Button, ButtonGroup, Spinner, Stack } from 'react-bootstrap';
 import { useState } from 'react';
 import promptGpt from './Skills/GPT.js';
+import getIntent from './Skills/HostSkills/IntentClassifier.js';
 
 let listAppGlobalPromptGenerator = null;
 let listAppGlobalCommandHandlers = new Map();
+let foodAndDrinkAppGlobalPromptGenerator = null;
+let foodAndDrinkAppGlobalCommandHandlers = new Map();
 
 function App() {
 
   const [isThinking, setIsThinking] = useState(false);
   const [userObjective, setUserObjective] = useState(''); 
   const [key, setKey] = useState('');
+  const [responseTone, setResponseTone] = useState('Professional');
+  const [userObjectiveHistory, setUserObjectiveHistory] = useState([]);
+  const [intent, setIntent] = useState('Unknown');
 
   const handleItemChange = (e) => {
     setUserObjective(e.currentTarget.value)
@@ -23,15 +30,13 @@ function App() {
     handleThink();
   }
 
-  const handleThink = async () => {
-      
-    setIsThinking(true);
+  const handleListAppIntent = async (promptData) => {
 
-    let prompt = listAppGlobalPromptGenerator(userObjective);
-  
-    const results = await promptGpt(prompt, key);
+    let promptInfo = listAppGlobalPromptGenerator(promptData);
 
-    console.log(JSON.stringify(results));
+    const results = await promptGpt(promptInfo.prompt, key, promptInfo.config);
+
+    console.log(JSON.stringify(results, null, 2));
 
     for (const step of results) {
 
@@ -41,22 +46,88 @@ function App() {
       await listAppGlobalCommandHandlers.get(command)(args);
     }
 
-    console.log('Done processing.');
-
-    setIsThinking(false);
-    setUserObjective('');
   }
 
-  const commandingContext = (promptGeneratorHandler) => {
-    listAppGlobalPromptGenerator = promptGeneratorHandler;
+  const handleFoodAndDrinkAppIntent = async (promptData) => {
+
+    let promptInfo = foodAndDrinkAppGlobalPromptGenerator(promptData);
+
+    const results = await promptGpt(promptInfo.prompt, key, promptInfo.config);
+
+    console.log(JSON.stringify(results, null, 2));
+
+    for (const step of results) {
+
+      let command = step.command;
+      let args = step.arguments;
+
+      await foodAndDrinkAppGlobalCommandHandlers.get(command)(args);
+    }
+
   }
 
-  const commandHandler = (command, handler) => {
-    listAppGlobalCommandHandlers.set(command, handler);
+  const handleThink = async () => {
+      
+    setIsThinking(true);
+
+    try {
+      // Get intent
+      let intentResult = await getIntent(userObjective, userObjectiveHistory, key);
+      console.log(JSON.stringify(intentResult, null, 2));
+      setIntent(intentResult.intent);
+
+      let promptData = {
+        userObjective: userObjective,
+        history: `NOTE: When generating text responses, use ${responseTone} tone.
+        Last 5 objectives provided by user:
+        ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + i).join('\n') : "NONE"}`
+      };
+
+      switch(intentResult.intent) {
+        case 'ListApp':
+          await handleListAppIntent(promptData);
+          break;
+        case 'FoodAndDrinkApp':
+          await handleFoodAndDrinkAppIntent(promptData);
+          break;
+        default:
+          console.log(`Unknown intent: ${intentResult.intent}`);
+      }
+
+      console.log('Done processing.');
+
+      // Add to history
+      let newHistory = userObjectiveHistory.slice();
+      newHistory.push(userObjective);
+      if (newHistory.length > 5) {
+        newHistory.shift();
+      }
+      setUserObjectiveHistory(newHistory);
+
+      setIsThinking(false);
+      setUserObjective('');
+    }
+    catch (e) {
+
+      if (e?.response.status === 401) {
+        alert('Invalid key');
+      }
+      else {     
+        alert(e.message);
+      }
+
+      console.log(e);
+      setIsThinking(false);
+    }
+    
   }
 
   const handleKeyChange = (e) => {
     setKey(e.currentTarget.value)
+  }
+
+  const handleToneChange = (e) => {
+    setResponseTone(e.currentTarget.value);
   }
 
   return (
@@ -68,7 +139,18 @@ function App() {
         <Form onSubmit={handleSubmit}>
 
           <Form.Group className="mb-3" controlId="formObjectiveText">
-            <Form.Control type="text" value={userObjective} onChange={handleItemChange} placeholder="What do you want to do with your lists?" />
+            <Form.Control type="text" value={userObjective} onChange={handleItemChange} placeholder="Say something..." />
+          </Form.Group>
+
+          <Form.Group className='mb-3' controlId='formResponseTone'>
+            <Form.Label>Response tone</Form.Label>
+            <Form.Select aria-label="response-tone" onChange={handleToneChange} value={responseTone}>
+              <option>Professional</option>
+              <option>Friendly</option>
+              <option>Funny</option>
+              <option>Sarcastic</option>
+              <option>Rude</option>
+            </Form.Select>
           </Form.Group>
 
           <ButtonGroup>
@@ -80,7 +162,7 @@ function App() {
                 size="sm"
                 role="status"
                 aria-hidden="true"
-              />Thinking...
+              />Thinking, intent is {intent}...
             </>}
             {!isThinking && <>Go 🪄</>}
             </Button>
@@ -88,13 +170,36 @@ function App() {
 
         </Form>
       </div>
+
       <div className="App-container">
+
+        <Stack direction="horizontal" gap={3}>
+          
+
         <ListApp
-          commandingContext={commandingContext}
-          commandHandler={commandHandler}
+          commandingContext={(promptGeneratorHandler) => {
+            listAppGlobalPromptGenerator = promptGeneratorHandler;
+            }}
+          commandHandler={(command, handler) => {
+            listAppGlobalCommandHandlers.set(command, handler);
+          }}
           LLMKey={key}
         />
+
+        <FoodAndDrinkApp 
+          commandingContext={(promptGeneratorHandler) => {
+            foodAndDrinkAppGlobalPromptGenerator = promptGeneratorHandler;
+            }}
+          commandHandler={(command, handler) => {
+            foodAndDrinkAppGlobalCommandHandlers.set(command, handler);
+          }}
+          LLMKey={key}
+        />
+
+        </Stack>
+        
       </div>
+
       <div className="App-config">
         <h4>Configure</h4>
           <Form>
