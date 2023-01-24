@@ -1,5 +1,7 @@
 # Uno-list.AI - Up your list making game with AI
 
+![ezgif com-gif-maker](https://user-images.githubusercontent.com/4107912/214234256-746b1f63-16d9-42b3-abbc-9b5f4d2d46b2.gif)
+
 ## Demo Videos 🎥
 * [AI Commanding Video Demo](https://youtu.be/QJ5InQm9-hA)
 * [List enhancement with AI Demo](https://youtu.be/g6lHez-VyPI)
