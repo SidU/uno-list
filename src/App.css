@@ -60,3 +60,16 @@
   margin-right: 20%;
   margin-top: 1.25em;
 }
+
+.App-ThoughtProcess {
+  margin-left: 20%;
+  margin-right: 20%;
+  margin-top: 1.25em;
+}
+
+.App-ThoughtProcess-Scrollable {
+  overflow-y: scroll;
+  height: 300px;
+  text-align: left;
+  font-size: small;
+}

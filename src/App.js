@@ -1,24 +1,79 @@
 import './App.css';
 import ListApp from './miniApps/ListApp';
 import FoodAndDrinkApp from './miniApps/FoodAndDrinkApp';
-import { Form, Button, ButtonGroup, Spinner, Stack } from 'react-bootstrap';
-import { useState } from 'react';
+import { Form, Button, ButtonGroup, Spinner, Stack, Accordion } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
 import promptGpt from './Skills/GPT.js';
+import promptGptPlainText from './Skills/GPTPlainText';
 import getIntent from './Skills/HostSkills/IntentClassifier.js';
 
 let listAppGlobalPromptGenerator = null;
 let listAppGlobalCommandHandlers = new Map();
 let foodAndDrinkAppGlobalPromptGenerator = null;
 let foodAndDrinkAppGlobalCommandHandlers = new Map();
+let inbuiltCommandHandlers = new Map();
+
+const initInBuiltCommandHandlers = (intent, key) => {
+
+  inbuiltCommandHandlers.set('INBUILT.CHAIN', async (args) => {
+
+    let prevStepOutput = [];
+
+    // Runs a chain of commands
+    for (const command of args) {
+
+      // Combine prevStepOutput with command arguments
+      let currentStepArguments = [...prevStepOutput, ...command.arguments];
+
+      // If command is a built-in command, run it
+      // Otherwise, run the command handler for the current intent
+
+      if (inbuiltCommandHandlers.has(command.command)) {
+        prevStepOutput = await inbuiltCommandHandlers.get(command.command)(currentStepArguments);
+      }
+      else {
+        switch (intent) {
+          case 'ListApp':
+            prevStepOutput = await listAppGlobalCommandHandlers.get(command.command)(currentStepArguments);
+            break;
+          case 'FoodAndDrinkApp':
+            prevStepOutput = await foodAndDrinkAppGlobalCommandHandlers.get(command.command)(currentStepArguments);
+            break;
+          default:
+            console.error(`Command ${command.command} not found`);
+            break;
+        }
+      }
+    }
+
+    return [prevStepOutput];
+  });
+
+  inbuiltCommandHandlers.set('INBUILT.PROMPT', async (args) => {
+
+    const results = await promptGptPlainText(args[0] + '\n' + args[1], key);
+
+    return [results];
+
+  });
+
+}
+
+initInBuiltCommandHandlers();
 
 function App() {
 
   const [isThinking, setIsThinking] = useState(false);
-  const [userObjective, setUserObjective] = useState(''); 
+  const [userObjective, setUserObjective] = useState('');
   const [key, setKey] = useState('');
   const [responseTone, setResponseTone] = useState('Professional');
   const [userObjectiveHistory, setUserObjectiveHistory] = useState([]);
   const [intent, setIntent] = useState('Unknown');
+  const [thoughtProcess, setThoughtProcess] = useState([]);
+
+  useEffect(() => {
+    initInBuiltCommandHandlers(intent, key);
+  }, [intent, key]);
 
   const handleItemChange = (e) => {
     setUserObjective(e.currentTarget.value)
@@ -30,45 +85,63 @@ function App() {
     handleThink();
   }
 
-  const handleListAppIntent = async (promptData) => {
+  const handleIntent = async (detectedIntent, promptData) => {
 
-    let promptInfo = listAppGlobalPromptGenerator(promptData);
+    addToThoughtProcess(`Detected intent: ${detectedIntent}. Asking matched-app to process objective...`);
+
+    let promptInfo = null;
+
+    switch (detectedIntent) {
+      case 'ListApp':
+        promptInfo = listAppGlobalPromptGenerator(promptData);
+        break;
+      case 'FoodAndDrinkApp':
+        promptInfo = foodAndDrinkAppGlobalPromptGenerator(promptData);
+        break;
+      default:
+        console.error(`Intent ${detectedIntent} not found`);
+        break;
+    }
 
     const results = await promptGpt(promptInfo.prompt, key, promptInfo.config);
 
     console.log(JSON.stringify(results, null, 2));
+
+    addToThoughtProcess(`Matched-app done processing objective. Now executing commands...`);
 
     for (const step of results) {
 
       let command = step.command;
       let args = step.arguments;
 
-      await listAppGlobalCommandHandlers.get(command)(args);
+      addToThoughtProcess(`Processing command: ${command} with arguments: ${args.join(', ')}`);
+
+      // If in-built intent, use in-built handler.
+      if (inbuiltCommandHandlers.has(command)) {
+        await inbuiltCommandHandlers.get(command)(args);
+      }
+      else {
+        switch (detectedIntent) {
+          case 'ListApp':
+            await listAppGlobalCommandHandlers.get(command)(args);
+            break;
+          case 'FoodAndDrinkApp':
+            await foodAndDrinkAppGlobalCommandHandlers.get(command)(args);
+            break;
+          default:
+            console.error(`Command ${detectedIntent} not found`);
+            addToThoughtProcess(`Command ${detectedIntent} not found`);
+            break;
+        }
+      }
     }
-
-  }
-
-  const handleFoodAndDrinkAppIntent = async (promptData) => {
-
-    let promptInfo = foodAndDrinkAppGlobalPromptGenerator(promptData);
-
-    const results = await promptGpt(promptInfo.prompt, key, promptInfo.config);
-
-    console.log(JSON.stringify(results, null, 2));
-
-    for (const step of results) {
-
-      let command = step.command;
-      let args = step.arguments;
-
-      await foodAndDrinkAppGlobalCommandHandlers.get(command)(args);
-    }
-
   }
 
   const handleThink = async () => {
-      
+
     setIsThinking(true);
+
+    addToThoughtProcess(`Objective received: ${userObjective}. Thinking...`);
 
     try {
       // Get intent
@@ -76,6 +149,9 @@ function App() {
       console.log(JSON.stringify(intentResult, null, 2));
       setIntent(intentResult.intent);
 
+      addToThoughtProcess('Intent: ' + intentResult.intent);
+
+      // Construct the prompt-data with history and objective
       let promptData = {
         userObjective: userObjective,
         history: `NOTE: When generating text responses, use ${responseTone} tone.
@@ -83,18 +159,11 @@ function App() {
         ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + i).join('\n') : "NONE"}`
       };
 
-      switch(intentResult.intent) {
-        case 'ListApp':
-          await handleListAppIntent(promptData);
-          break;
-        case 'FoodAndDrinkApp':
-          await handleFoodAndDrinkAppIntent(promptData);
-          break;
-        default:
-          console.log(`Unknown intent: ${intentResult.intent}`);
-      }
+      // Run the intent handler
+      await handleIntent(intentResult.intent, promptData);
 
       console.log('Done processing.');
+      addToThoughtProcess('Done processing.');
 
       // Add to history
       let newHistory = userObjectiveHistory.slice();
@@ -104,22 +173,25 @@ function App() {
       }
       setUserObjectiveHistory(newHistory);
 
+      // Ready for next objective
       setIsThinking(false);
       setUserObjective('');
     }
     catch (e) {
 
-      if (e?.response.status === 401) {
+      addToThoughtProcess('Error: ' + e.message);
+
+      if (e?.response?.status === 401) {
         alert('Invalid key');
       }
-      else {     
+      else {
         alert(e.message);
       }
 
       console.log(e);
       setIsThinking(false);
     }
-    
+
   }
 
   const handleKeyChange = (e) => {
@@ -130,10 +202,15 @@ function App() {
     setResponseTone(e.currentTarget.value);
   }
 
+  const addToThoughtProcess = (text) => {
+    thoughtProcess.push(text);
+    setThoughtProcess(thoughtProcess);
+  }
+
   return (
     <div className="App">
       <header className="App-header">
-            App Commands GPT - Demo
+        App Commands GPT - Demo ✨
       </header>
       <div className="App-globalActions">
         <Form onSubmit={handleSubmit}>
@@ -154,17 +231,17 @@ function App() {
           </Form.Group>
 
           <ButtonGroup>
-            <Button disabled={isThinking} onClick={(e) => {handleThink()}}>
-            {isThinking && <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-              />Thinking, intent is {intent}...
-            </>}
-            {!isThinking && <>Go 🪄</>}
+            <Button disabled={isThinking} onClick={(e) => { handleThink() }}>
+              {isThinking && <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                />Thinking, intent is {intent}...
+              </>}
+              {!isThinking && <>Go ✨</>}
             </Button>
           </ButtonGroup>
 
@@ -174,41 +251,59 @@ function App() {
       <div className="App-container">
 
         <Stack direction="horizontal" gap={3}>
-          
 
-        <ListApp
-          commandingContext={(promptGeneratorHandler) => {
-            listAppGlobalPromptGenerator = promptGeneratorHandler;
-            }}
-          commandHandler={(command, handler) => {
-            listAppGlobalCommandHandlers.set(command, handler);
-          }}
-          LLMKey={key}
-        />
 
-        <FoodAndDrinkApp 
-          commandingContext={(promptGeneratorHandler) => {
-            foodAndDrinkAppGlobalPromptGenerator = promptGeneratorHandler;
+          <ListApp
+            commandingContext={(promptGeneratorHandler) => {
+              listAppGlobalPromptGenerator = promptGeneratorHandler;
             }}
-          commandHandler={(command, handler) => {
-            foodAndDrinkAppGlobalCommandHandlers.set(command, handler);
-          }}
-          LLMKey={key}
-        />
+            commandHandler={(command, handler) => {
+              listAppGlobalCommandHandlers.set(command, handler);
+            }}
+            LLMKey={key}
+          />
+
+          <FoodAndDrinkApp
+            commandingContext={(promptGeneratorHandler) => {
+              foodAndDrinkAppGlobalPromptGenerator = promptGeneratorHandler;
+            }}
+            commandHandler={(command, handler) => {
+              foodAndDrinkAppGlobalCommandHandlers.set(command, handler);
+            }}
+            LLMKey={key}
+          />
 
         </Stack>
-        
+
       </div>
 
       <div className="App-config">
         <h4>Configure</h4>
-          <Form>
-            <Form.Group className="mb-3" controlId="formKeyText">
-              <Form.Control type="password" value={key} onChange={handleKeyChange} placeholder="Key" />
-              <a href='https://beta.openai.com/account/api-keys'>Get</a>
-            </Form.Group>
-          </Form>
+        <Form>
+          <Form.Group className="mb-3" controlId="formKeyText">
+            <Form.Control type="password" value={key} onChange={handleKeyChange} placeholder="Key" />
+            <a href='https://beta.openai.com/account/api-keys'>Get</a>
+          </Form.Group>
+        </Form>
       </div>
+
+      <div className="App-ThoughtProcess">
+        <Accordion defaultActiveKey="0">
+          <Accordion.Item eventKey="0">
+            <Accordion.Header>Thought process</Accordion.Header>
+            <Accordion.Body>
+              {thoughtProcess.length > 0 && <Button variant='danger' onClick={() => {setThoughtProcess([])}}>Clear</Button>}
+              {thoughtProcess.length === 0 && <p>Nothing yet.</p>}       
+              <div className="App-ThoughtProcess-Scrollable">
+                {thoughtProcess.map((item, index) => {
+                  return <p key={index}>{item}</p>
+                })}
+              </div>      
+            </Accordion.Body>
+          </Accordion.Item>
+        </Accordion>
+      </div>
+
     </div>
   );
 }

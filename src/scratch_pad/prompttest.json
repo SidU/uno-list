@@ -1,0 +1,31 @@
+[
+    {
+      "command":"SAY",
+      "arguments":[
+        "Checking groceries list for milk..."
+      ]
+    },
+    {
+        "command": "INBUILT.CHAIN",
+        "arguments": [
+            {
+                "command": "INBUILT.CHAIN",
+                "arguments": [{
+                    "command": "SUMMARIZE_CONTENT",
+                    "arguments": [
+                      "Groceries"
+                    ]}, {
+                   "command": "INBUILT.PROMPT",
+                    "arguments": [
+                      "Given the following context, answer - Can you check if we already have milk in the groceries list?"
+                    ]}
+                  ]
+            },
+            {
+                "command": "SAY",
+                "arguments": [
+                ]
+            }
+        ]
+    }
+]

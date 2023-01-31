@@ -27,6 +27,9 @@ function ListApp(props) {
             ADD_ITEM_TO_LIST(X, "TEXT") - Add the specified text to the list with id x
             REMOVE_ITEM_FROM_LIST(X, Y) - Remove item X from the list whose name is Y
             SAY("TEXT") - Says the specified text
+            SUMMARIZE_CONTENT("TEXT") - Summarizes the contents of list whose name is provided
+            INBUILT.CHAIN("COMMAND_1", [X, Y], "COMMAND_2", [P, Q]) - Runs Command_1 with arguments [X, Y] and sends the output to Command_2 with additional arguments [P, Q]
+            INBUILT.PROMPT("CONTEXT", "QUESTION") - Sends a question to LLM with a prompt containing the provided context
 
         Based on your given objective, issue whatever commands you believe will get you closest to achieving your goal.
 
@@ -103,6 +106,41 @@ function ListApp(props) {
           }
           ]
 
+          EXAMPLE 4:
+          OBJECTIVE: ["Can you check if we already have milk in the groceries list?"]
+          YOUR COMMANDS: 
+          [
+            {
+              "command":"SAY",
+              "arguments":[
+                "Checking groceries list for milk..."
+              ]
+            },
+            {
+                "command": "INBUILT.CHAIN",
+                "arguments": [
+                    {
+                        "command": "INBUILT.CHAIN",
+                        "arguments": [{
+                            "command": "SUMMARIZE_CONTENT",
+                            "arguments": [
+                              "Groceries"
+                            ]}, {
+                           "command": "INBUILT.PROMPT",
+                            "arguments": [
+                              "----Listed above are the contents of the groceries list. Is milk in the list?"
+                            ]}
+                          ]
+                    },
+                    {
+                        "command": "SAY",
+                        "arguments": [
+                        ]
+                    }
+                ]
+            }
+        ]
+
         ${promptData.history}
 
         OBJECTIVE: ["${promptData.userObjective}"]
@@ -125,6 +163,15 @@ function ListApp(props) {
     props.commandHandler("REMOVE_ITEM_FROM_LIST", (args) => {
         try {
             deleteItemFromList(args[0], args[1]);
+        }
+        catch (e) {
+            console.log(e);
+        }
+    });
+
+    props.commandHandler("SUMMARIZE_CONTENT", (args) => {
+        try {
+            return [summarizeContent(args[0])];
         }
         catch (e) {
             console.log(e);
@@ -174,6 +221,10 @@ function ListApp(props) {
       setListTitle(listName);
 
       handleAlertVisible(`Removed ${item} from ${listName}`);
+    }
+
+    const summarizeContent = (listName) => {
+        return lists.current.get(listName).join(", ");
     }
 
     const handleAlertVisible = (message) => {
@@ -285,7 +336,7 @@ function ListApp(props) {
                                   aria-hidden="true"
                                   />Thinking...
                               </>}
-                              {!isThinking && <>Suggest 🪄</>}
+                              {!isThinking && <>Suggest ✨</>}
                               </Button>
                           </ButtonGroup>
                           
