@@ -4,7 +4,6 @@ import FoodAndDrinkApp from './miniApps/FoodAndDrinkApp';
 import { Form, Button, ButtonGroup, Spinner, Stack, Accordion } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import promptGpt from './Skills/GPT.js';
-import promptGptPlainText from './Skills/GPTPlainText';
 import getIntent from './Skills/HostSkills/IntentClassifier.js';
 
 let listAppGlobalPromptGenerator = null;
@@ -51,7 +50,7 @@ const initInBuiltCommandHandlers = (intent, key) => {
 
   inbuiltCommandHandlers.set('INBUILT.PROMPT', async (args) => {
 
-    const results = await promptGptPlainText(args[0] + '\n' + args[1], key);
+    const results = await promptGpt(args[0] + '\n' + args[1], key);
 
     return [results];
 
@@ -65,15 +64,14 @@ function App() {
 
   const [isThinking, setIsThinking] = useState(false);
   const [userObjective, setUserObjective] = useState('');
-  const [key, setKey] = useState('');
   const [responseTone, setResponseTone] = useState('Professional');
   const [userObjectiveHistory, setUserObjectiveHistory] = useState([]);
   const [intent, setIntent] = useState('Unknown');
   const [thoughtProcess, setThoughtProcess] = useState([]);
 
   useEffect(() => {
-    initInBuiltCommandHandlers(intent, key);
-  }, [intent, key]);
+    initInBuiltCommandHandlers(intent);
+  }, [intent]);
 
   const handleItemChange = (e) => {
     setUserObjective(e.currentTarget.value)
@@ -103,7 +101,7 @@ function App() {
         break;
     }
 
-    const results = await promptGpt(promptInfo.prompt, key, promptInfo.config);
+    const results = await promptGpt(promptInfo.prompt, promptInfo.config);
 
     console.log(JSON.stringify(results, null, 2));
 
@@ -145,7 +143,7 @@ function App() {
 
     try {
       // Get intent
-      let intentResult = await getIntent(userObjective, userObjectiveHistory, key);
+      let intentResult = await getIntent(userObjective, userObjectiveHistory);
       console.log(JSON.stringify(intentResult, null, 2));
       setIntent(intentResult.intent);
 
@@ -192,10 +190,6 @@ function App() {
       setIsThinking(false);
     }
 
-  }
-
-  const handleKeyChange = (e) => {
-    setKey(e.currentTarget.value)
   }
 
   const handleToneChange = (e) => {
@@ -252,7 +246,6 @@ function App() {
 
         <Stack direction="horizontal" gap={3}>
 
-
           <ListApp
             commandingContext={(promptGeneratorHandler) => {
               listAppGlobalPromptGenerator = promptGeneratorHandler;
@@ -260,7 +253,6 @@ function App() {
             commandHandler={(command, handler) => {
               listAppGlobalCommandHandlers.set(command, handler);
             }}
-            LLMKey={key}
           />
 
           <FoodAndDrinkApp
@@ -270,21 +262,10 @@ function App() {
             commandHandler={(command, handler) => {
               foodAndDrinkAppGlobalCommandHandlers.set(command, handler);
             }}
-            LLMKey={key}
           />
 
         </Stack>
 
-      </div>
-
-      <div className="App-config">
-        <h4>Configure</h4>
-        <Form>
-          <Form.Group className="mb-3" controlId="formKeyText">
-            <Form.Control type="password" value={key} onChange={handleKeyChange} placeholder="Key" />
-            <a href='https://beta.openai.com/account/api-keys'>Get</a>
-          </Form.Group>
-        </Form>
       </div>
 
       <div className="App-ThoughtProcess">

@@ -53,7 +53,7 @@ function FoodAndDrinkApp(props) {
 
             searchResults.current = '';
 
-            let text = await searchFoodAndDrink(args[0], props.LLMKey);
+            let text = await searchFoodAndDrink(args[0]);
 
             searchResults.current = text;
 

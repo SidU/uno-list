@@ -1,6 +1,6 @@
-import axios from 'axios';
+const axios = require('axios');
 
-export default async function promptGptPlainText (prompt, key, config) {
+module.exports = async function promptGptPlainText (prompt, key, config) {
 
   console.log(prompt);
 
