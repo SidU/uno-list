@@ -251,36 +251,25 @@ function ListApp(props) {
       setIsThinking(true);
   
       try {
-
-        const key = props.LLMKey;
-
-        if (key.length === 0) {
-          throw new Error('Please enter a key');
-        }
   
         let items = getListItems(listTitle);
   
         // Give the current list a name. Move the items in the existing list to new list.
         let prevListTitle = listTitle;
-        let newListTitle = await getListTitle(items, key);
+        let newListTitle = await getListTitle(items);
         renameList(prevListTitle, newListTitle);
         setListTitle(newListTitle);
   
         // Use AI to determine suggested items.
-        setSuggestedItems(await getSuggestedItems(items, listTitle, 5, key));
+        setSuggestedItems(await getSuggestedItems(items, listTitle, 5));
   
         // Use AI to determine actions.
-        setActions(await getActions(items, listTitle, 5, key));
+        setActions(await getActions(items, listTitle, 5));
   
         setIsThinking(false);
       }
       catch (e) {
-        if (e?.response.status === 401) {
-          alert('Invalid key');
-        }
-        else {     
-          alert(e.message);
-        }
+        alert(e.message);
   
         setIsThinking(false);
         return;
