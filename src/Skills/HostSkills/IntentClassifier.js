@@ -11,10 +11,10 @@ export default async function getIntent(userObjective, userObjectiveHistory, key
     EXAMPLE 2) User wants to add an item to a list.
     User: Need to buy milk
     AI: { "intent": "ListApp" }
-   
-    EXAMPLE 3) User wants to see a list of places to visit.
-    User: Must-see places in India
-    AI: { "intent": "ListApp" }
+
+    EXAMPLE 3) User is searching for information about Taj Mahal.
+    User: Taj Mahal
+    AI: { "intent": "TravelApp" }
     
     HISTORY OF LAST 5 USER INTENTS
     ${userObjectiveHistory.length > 0 ? '- ' + userObjectiveHistory.join('\n'): "NONE"}

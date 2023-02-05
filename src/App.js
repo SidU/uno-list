@@ -1,6 +1,7 @@
 import './App.css';
 import ListApp from './miniApps/ListApp';
 import FoodAndDrinkApp from './miniApps/FoodAndDrinkApp';
+import TravelApp from './miniApps/TravelApp';
 import { Form, Button, ButtonGroup, Spinner, Stack, Accordion } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import promptGpt from './Skills/GPT.js';
@@ -10,6 +11,9 @@ let listAppGlobalPromptGenerator = null;
 let listAppGlobalCommandHandlers = new Map();
 let foodAndDrinkAppGlobalPromptGenerator = null;
 let foodAndDrinkAppGlobalCommandHandlers = new Map();
+let travelAppGlobalPromptGenerator = null;
+let travelAppGlobalCommandHandlers = new Map();
+
 let inbuiltCommandHandlers = new Map();
 
 const initInBuiltCommandHandlers = (intent, key) => {
@@ -37,6 +41,9 @@ const initInBuiltCommandHandlers = (intent, key) => {
             break;
           case 'FoodAndDrinkApp':
             prevStepOutput = await foodAndDrinkAppGlobalCommandHandlers.get(command.command)(currentStepArguments);
+            break;
+          case 'TravelApp':
+            prevStepOutput = await travelAppGlobalCommandHandlers.get(command.command)(currentStepArguments);
             break;
           default:
             console.error(`Command ${command.command} not found`);
@@ -96,6 +103,9 @@ function App() {
       case 'FoodAndDrinkApp':
         promptInfo = foodAndDrinkAppGlobalPromptGenerator(promptData);
         break;
+      case 'TravelApp':
+        promptInfo = travelAppGlobalPromptGenerator(promptData);
+        break;
       default:
         console.error(`Intent ${detectedIntent} not found`);
         break;
@@ -125,6 +135,9 @@ function App() {
             break;
           case 'FoodAndDrinkApp':
             await foodAndDrinkAppGlobalCommandHandlers.get(command)(args);
+            break;
+          case 'TravelApp':
+            await travelAppGlobalCommandHandlers.get(command)(args);
             break;
           default:
             console.error(`Command ${detectedIntent} not found`);
@@ -261,6 +274,15 @@ function App() {
             }}
             commandHandler={(command, handler) => {
               foodAndDrinkAppGlobalCommandHandlers.set(command, handler);
+            }}
+          />
+
+          <TravelApp
+            commandingContext={(promptGeneratorHandler) => {
+              travelAppGlobalPromptGenerator = promptGeneratorHandler;
+            }}
+            commandHandler={(command, handler) => {
+              travelAppGlobalCommandHandlers.set(command, handler);
             }}
           />
 

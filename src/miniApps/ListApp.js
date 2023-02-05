@@ -107,7 +107,7 @@ function ListApp(props) {
           ]
 
           EXAMPLE 4:
-          OBJECTIVE: ["Can you check if we already have milk in the groceries list?"]
+          OBJECTIVE: ["Can you check if we already have milk in the groceries list?", "/search milk groceries list"]
           YOUR COMMANDS: 
           [
             {

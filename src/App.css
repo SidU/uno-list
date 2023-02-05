@@ -37,8 +37,8 @@
 }
 
 .App-container {
-  margin-left: 20%;
-  margin-right: 20%;
+  margin-left: 1em;
+  margin-right: 1em;
 }
 
 .App-container h4 {
@@ -72,4 +72,8 @@
   height: 300px;
   text-align: left;
   font-size: small;
+}
+
+.App-experience {
+  max-width: 30em;
 }
