@@ -10,5 +10,20 @@
 
 ## [Live Demo 🚀](https://red-rock-0b0e3080f.2.azurestaticapps.net/)
 
+# Commands to try
+
+| Command       | Effect      |
+| ------------- |-------------|
+| Buy milk      | Adds milk to Groceries list |
+| Buy beans and cereal     | Adds beans and cereal to Groceries list      |
+| Do we have any dairy items in the groceries list? | Should detect milk      |
+| Cocktail recipes | Should ask FoodAndDrink app to search |
+| Tell me more about Long Island Iced Tea | Will ask FoodAndDrink app to search |
+| Alright, let's buy the stuff | Should search for ingredients of Long Island Iced Tea and add them to the list |
+| Places to visit in India | Should add a set of places to Travel list |
+
+... lots more. But hope the above gives you an idea of the kind of things you can try.
+
+
 # To run on your local machine
 `npm start`
