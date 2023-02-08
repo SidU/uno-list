@@ -245,6 +245,9 @@ function App() {
 
           <Form.Group className="mb-3" controlId="formObjectiveText">
             <Form.Control type="text" value={userObjective} onChange={handleItemChange} placeholder="Say something..." />
+            {nextUtterance && <Form.Text className="text-muted">
+            ✨ AI Suggested Text (Editable)
+            </Form.Text>}
           </Form.Group>
 
           <Form.Group className='mb-3' controlId='formResponseTone'>
