@@ -166,8 +166,8 @@ function App() {
       let promptData = {
         userObjective: userObjective,
         history: `NOTE: When generating text responses, use ${responseTone} tone.
-        Last 5 objectives provided by user:
-        ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + i).join('\n') : "NONE"}`
+        HISTORY: Last 5 objectives provided by user:
+        ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + i.text).join('\n') : "NONE"}`
       };
 
       // Run the intent handler
@@ -177,13 +177,8 @@ function App() {
       addToThoughtProcess('Done processing.');
 
       // Add to history
-      let newHistory = userObjectiveHistory.slice();
-      newHistory.push(userObjective);
-      if (newHistory.length > 5) {
-        newHistory.shift();
-      }
-      setUserObjectiveHistory(newHistory);
-
+      addToObjectiveHistory(userObjective, intentResult.intent);
+      
       // Ready for next objective
       setIsThinking(false);
       setUserObjective('');
@@ -203,6 +198,15 @@ function App() {
       setIsThinking(false);
     }
 
+  }
+
+  const addToObjectiveHistory = (text, intent) => {
+    let newHistory = userObjectiveHistory.slice();
+    newHistory.push({ "text": text, "intent": intent });
+    if (newHistory.length > 5) {
+      newHistory.shift();
+    }
+    setUserObjectiveHistory(newHistory);
   }
 
   const handleToneChange = (e) => {
