@@ -16,8 +16,8 @@ export default async function getIntent(userObjective, userObjectiveHistory, key
     User: Taj Mahal
     AI: { "intent": "TravelApp" }
     
-    HISTORY OF LAST 5 USER INTENTS
-    ${userObjectiveHistory.length > 0 ? '- ' + userObjectiveHistory.join('\n'): "NONE"}
+    HISTORY OF LAST 5 USER UTTERANCES
+    ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + i.text).join('\n') : "NONE"}
     
     NOTE: When user's intent is unclear, continue with previous intent.
     

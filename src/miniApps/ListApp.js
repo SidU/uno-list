@@ -144,6 +144,7 @@ function ListApp(props) {
         ${promptData.history}
 
         OBJECTIVE: ["${promptData.userObjective}"]
+        NOTE: If the user's objective is unclear, use the history above to infer the objective accurately.
         YOUR COMMANDS:`
     }});
 
