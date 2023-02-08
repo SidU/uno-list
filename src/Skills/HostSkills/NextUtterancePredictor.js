@@ -1,28 +1,25 @@
 import promptGpt from '../../Skills/GPT.js';
 
-export default async function getNextUtterance(userObjective, userObjectiveHistory, key) {
+export default async function getNextUtterance(userObjectiveHistory, key) {
     
-    const prompt = `INTENT MUST BE ONE OF FoodAndDrink, ListApp. DO NOT CREATE NEW INTENTS.
+    const prompt = `You are a Command Prediction agent.
 
-    EXAMPLE 1) User is searching for food recipies.
-    User: I want to learn more about Indian food recipies.
-    AI: { "intent": "FoodAndDrinkApp" }   
+    You are given a list of most recent commands issued by the user.
     
-    EXAMPLE 2) User wants to add an item to a list.
-    User: Need to buy milk
-    AI: { "intent": "ListApp" }
-
-    EXAMPLE 3) User is searching for information about Taj Mahal.
-    User: Taj Mahal
-    AI: { "intent": "TravelApp" }
+    You must predict the next command the user is most likely to issue to continue their objective.
     
-    HISTORY OF LAST 5 USER INTENTS
-    ${userObjectiveHistory.length > 0 ? '- ' + userObjectiveHistory.join('\n'): "NONE"}
+    Your response must be in the form of { "text": "bla bla" }
     
-    NOTE: When user's intent is unclear, continue with previous intent.
+    Your command must be related to the following apps:
+    - ListApp
+    - FoodAndDrinkApp
+    - TravelApp
     
-    User: ${userObjective}
-    AI:`;
+    User's commands (most recent at bottom)
+    
+    ${userObjectiveHistory.length > 0 ? userObjectiveHistory.map(i => '- ' + JSON.stringify(i)).join('\n') : "NONE"}
+    
+    Prediction:`;
 
     const results = await promptGpt(prompt, key);
     

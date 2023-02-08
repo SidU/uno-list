@@ -6,6 +6,7 @@ import { Form, Button, ButtonGroup, Spinner, Stack, Accordion } from 'react-boot
 import { useState, useEffect } from 'react';
 import promptGpt from './Skills/GPT.js';
 import getIntent from './Skills/HostSkills/IntentClassifier.js';
+import getNextUtterance from './Skills/HostSkills/NextUtterancePredictor.js';
 
 let listAppGlobalPromptGenerator = null;
 let listAppGlobalCommandHandlers = new Map();
@@ -75,6 +76,7 @@ function App() {
   const [userObjectiveHistory, setUserObjectiveHistory] = useState([]);
   const [intent, setIntent] = useState('Unknown');
   const [thoughtProcess, setThoughtProcess] = useState([]);
+  const [nextUtterance, setNextUtterance] = useState('');
 
   useEffect(() => {
     initInBuiltCommandHandlers(intent);
@@ -155,12 +157,25 @@ function App() {
     addToThoughtProcess(`Objective received: ${userObjective}. Thinking...`);
 
     try {
-      // Get intent
-      let intentResult = await getIntent(userObjective, userObjectiveHistory);
-      console.log(JSON.stringify(intentResult, null, 2));
-      setIntent(intentResult.intent);
 
-      addToThoughtProcess('Intent: ' + intentResult.intent);
+      let intent = null;
+
+      // Get intent
+      if (userObjective === nextUtterance.text) {
+        console.log(`User objective is the same as the next utterance. Continuing with ${nextUtterance.intent}.`);
+        addToThoughtProcess(`User objective is the same as the next utterance. Continuing with ${nextUtterance.intent}.`);
+
+        intent = nextUtterance.intent;
+      }
+      else {
+        let intentResult = await getIntent(userObjective, userObjectiveHistory);
+        console.log(JSON.stringify(intentResult, null, 2));
+
+        intent = intentResult.intent;
+      }
+
+      setIntent(intent);  
+      addToThoughtProcess('Intent: ' + intent);
 
       // Construct the prompt-data with history and objective
       let promptData = {
@@ -171,17 +186,18 @@ function App() {
       };
 
       // Run the intent handler
-      await handleIntent(intentResult.intent, promptData);
+      await handleIntent(intent, promptData);
 
       console.log('Done processing.');
       addToThoughtProcess('Done processing.');
 
-      // Add to history
-      addToObjectiveHistory(userObjective, intentResult.intent);
+      // Add to history and predict next utterance
+      var nextPredictedUtterance = await addToObjectiveHistory(userObjective, intent);
+      setNextUtterance(nextPredictedUtterance);
+      setUserObjective(nextPredictedUtterance.text);
       
       // Ready for next objective
       setIsThinking(false);
-      setUserObjective('');
     }
     catch (e) {
 
@@ -200,13 +216,14 @@ function App() {
 
   }
 
-  const addToObjectiveHistory = (text, intent) => {
+  const addToObjectiveHistory = async (text, intent) => {
     let newHistory = userObjectiveHistory.slice();
     newHistory.push({ "text": text, "intent": intent });
     if (newHistory.length > 5) {
       newHistory.shift();
     }
     setUserObjectiveHistory(newHistory);
+    return await getNextUtterance(newHistory);
   }
 
   const handleToneChange = (e) => {
